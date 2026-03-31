@@ -65,13 +65,9 @@ export default function CapturePage() {
       } = await supabase.auth.getSession();
       if (!session) throw new Error("セッションを作成できませんでした。Supabaseの匿名認証が有効か確認してください。");
 
-      const res = await fetch("/api/treasures", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from("treasures")
+        .insert({
           user_id: session.user.id,
           name: result.name,
           scientific_name: result.scientificName,
@@ -81,13 +77,13 @@ export default function CapturePage() {
           image: base64,
           rotation: result.rotation,
           raw_response: result,
-        }),
-      });
-      const json = await res.json();
+        })
+        .select()
+        .single();
 
-      if (!json.success) throw new Error(json.error);
+      if (error) throw new Error(error.message);
 
-      router.push(`/treasure/${json.data.id}`);
+      router.push(`/treasure/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
       setStep("confirm");
