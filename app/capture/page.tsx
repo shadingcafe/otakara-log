@@ -66,7 +66,10 @@ export default function CapturePage() {
 
       const res = await fetch("/api/treasures", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           user_id: session.user.id,
           name: result.name,
