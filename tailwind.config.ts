@@ -9,8 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        cork: "var(--color-cork)",
+        lime: "var(--color-lime)",
+        "lime-dark": "var(--color-lime-dark)",
+        panel: "var(--color-panel)",
+        "data-green": "var(--color-data)",
+        pin: "var(--color-pin)",
+      },
+      fontFamily: {
+        heading: ["var(--font-heading)"],
+        mono: ["var(--font-mono)"],
+        serif: ["var(--font-serif)"],
       },
     },
   },
