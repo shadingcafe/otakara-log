@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { supabase, ensureAnonymousSession } from "@/lib/supabase";
 import { CameraCapture } from "@/components/CameraCapture";
 import { AnalyzingLoader } from "@/components/AnalyzingLoader";
 
@@ -59,10 +59,11 @@ export default function CapturePage() {
     setStep("saving");
 
     try {
+      await ensureAnonymousSession();
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) throw new Error("セッションがありません");
+      if (!session) throw new Error("セッションを作成できませんでした。Supabaseの匿名認証が有効か確認してください。");
 
       const res = await fetch("/api/treasures", {
         method: "POST",
