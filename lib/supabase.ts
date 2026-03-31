@@ -7,12 +7,14 @@ export const supabase = createClient(
 
 export async function ensureAnonymousSession() {
   const {
-    data: { session },
+    data: { session: existing },
   } = await supabase.auth.getSession();
-  if (!session) {
-    const { error } = await supabase.auth.signInAnonymously();
-    if (error) throw new Error(`匿名ログイン失敗: ${error.message}`);
-  }
+  if (existing) return existing;
+
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error) throw new Error(`匿名ログイン失敗: ${error.message}`);
+  if (!data.session) throw new Error("匿名ログイン後もセッションが取得できませんでした");
+  return data.session;
 }
 
 export async function getUserId(): Promise<string | null> {

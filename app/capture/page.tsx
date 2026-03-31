@@ -59,11 +59,7 @@ export default function CapturePage() {
     setStep("saving");
 
     try {
-      await ensureAnonymousSession();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("セッションを作成できませんでした。Supabaseの匿名認証が有効か確認してください。");
+      const session = await ensureAnonymousSession();
 
       const { data, error } = await supabase
         .from("treasures")
