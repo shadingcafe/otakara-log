@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { processImage } from "@/lib/image-utils";
+import { processImage, applyFisheyeToyCamera } from "@/lib/image-utils";
 import { ScanOverlay } from "./ScanOverlay";
 
 export function CameraCapture({
@@ -10,7 +10,9 @@ export function CameraCapture({
   onCapture: (base64: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const animFrameRef = useRef<number>(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -29,6 +31,43 @@ export function CameraCapture({
     }
   }, []);
 
+  // リアルタイム魚眼プレビュー
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = previewCanvasRef.current;
+    if (!video || !canvas) return;
+
+    let lastTime = 0;
+    const INTERVAL = 1000 / 20; // 20fps
+
+    const renderFrame = (timestamp: number) => {
+      animFrameRef.current = requestAnimationFrame(renderFrame);
+      if (timestamp - lastTime < INTERVAL) return;
+      lastTime = timestamp;
+
+      if (video.readyState < 2 || video.videoWidth === 0) return;
+
+      const size = Math.min(video.videoWidth, video.videoHeight);
+      const sx = (video.videoWidth - size) / 2;
+      const sy = (video.videoHeight - size) / 2;
+
+      const PREVIEW_SIZE = 400;
+      canvas.width = PREVIEW_SIZE;
+      canvas.height = PREVIEW_SIZE;
+
+      const tmpCanvas = document.createElement("canvas");
+      tmpCanvas.width = PREVIEW_SIZE;
+      tmpCanvas.height = PREVIEW_SIZE;
+      tmpCanvas.getContext("2d")!.drawImage(video, sx, sy, size, size, 0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+
+      const processed = applyFisheyeToyCamera(tmpCanvas);
+      canvas.getContext("2d")!.drawImage(processed, 0, 0);
+    };
+
+    animFrameRef.current = requestAnimationFrame(renderFrame);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [stream]);
+
   useEffect(() => {
     startCamera();
     return () => {
@@ -41,26 +80,33 @@ export function CameraCapture({
     if (!videoRef.current || processing) return;
     setProcessing(true);
 
-    const video = videoRef.current;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")!.drawImage(video, 0, 0);
+    try {
+      const video = videoRef.current;
+      const size = Math.min(video.videoWidth || 640, video.videoHeight || 480);
+      const sx = (video.videoWidth - size) / 2;
+      const sy = (video.videoHeight - size) / 2;
 
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) {
-          setProcessing(false);
-          return;
-        }
-        const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-        const base64 = await processImage(file);
-        stream?.getTracks().forEach((t) => t.stop());
-        onCapture(base64);
-      },
-      "image/jpeg",
-      0.9
-    );
+      const tmpCanvas = document.createElement("canvas");
+      tmpCanvas.width = size;
+      tmpCanvas.height = size;
+      tmpCanvas.getContext("2d")!.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        tmpCanvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("キャプチャに失敗しました"))),
+          "image/jpeg",
+          0.9
+        );
+      });
+
+      const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+      const base64 = await processImage(file);
+      stream?.getTracks().forEach((t) => t.stop());
+      onCapture(base64);
+    } catch (err) {
+      console.error("Capture error:", err);
+      setProcessing(false);
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,22 +114,27 @@ export function CameraCapture({
     if (!file || processing) return;
     setProcessing(true);
 
-    const base64 = await processImage(file);
-    stream?.getTracks().forEach((t) => t.stop());
-    onCapture(base64);
+    try {
+      const base64 = await processImage(file);
+      stream?.getTracks().forEach((t) => t.stop());
+      onCapture(base64);
+    } catch (err) {
+      console.error("File select error:", err);
+      setProcessing(false);
+    }
   };
 
   return (
     <div className="flex flex-col items-center gap-6">
       {/* カメラプレビュー */}
       <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl bg-black">
+        {/* 非表示の video 要素（ストリーム取得用） */}
+        <video ref={videoRef} autoPlay playsInline muted className="hidden" />
+
         {!cameraError ? (
           <div className="relative aspect-square overflow-hidden">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
+            <canvas
+              ref={previewCanvasRef}
               className="h-full w-full object-cover"
             />
             <ScanOverlay />
