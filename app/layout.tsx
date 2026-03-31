@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Dela_Gothic_One, Space_Mono, Noto_Serif_JP } from "next/font/google";
+import { Dela_Gothic_One, Space_Mono, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
@@ -17,7 +17,7 @@ const spaceMono = Space_Mono({
   display: "swap",
 });
 
-const notoSerifJP = Noto_Serif_JP({
+const notoSansJP = Noto_Sans_JP({
   weight: ["400", "700"],
   subsets: ["latin"],
   variable: "--font-serif",
@@ -51,7 +51,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${delaGothic.variable} ${spaceMono.variable} ${notoSerifJP.variable} antialiased`}
+        className={`${delaGothic.variable} ${spaceMono.variable} ${notoSansJP.variable} antialiased`}
       >
         <AuthProvider>{children}</AuthProvider>
       </body>
