@@ -26,11 +26,12 @@ export default function HomePage() {
         return;
       }
 
-      const res = await fetch(`/api/treasures?user_id=${session.user.id}`);
-      const json = await res.json();
-      if (json.success) {
-        setTreasures(json.data);
-      }
+      const { data } = await supabase
+        .from("treasures")
+        .select("id, name, image, rotation")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (data) setTreasures(data);
       setLoading(false);
     }
     load();

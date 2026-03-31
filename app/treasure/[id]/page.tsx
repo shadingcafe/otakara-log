@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { TreasureReport } from "@/components/TreasureReport";
 
 interface Treasure {
@@ -24,12 +25,15 @@ export default function TreasureDetailPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/treasures?id=${params.id}`);
-        const json = await res.json();
-        if (json.success) {
-          setTreasure(json.data);
-        } else {
+        const { data, error } = await supabase
+          .from("treasures")
+          .select("*")
+          .eq("id", params.id)
+          .single();
+        if (error || !data) {
           setError("オタカラが見つかりませんでした");
+        } else {
+          setTreasure(data);
         }
       } catch {
         setError("データの取得に失敗しました");
