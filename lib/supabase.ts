@@ -10,7 +10,8 @@ export async function ensureAnonymousSession() {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) {
-    await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw new Error(`匿名ログイン失敗: ${error.message}`);
   }
 }
 
